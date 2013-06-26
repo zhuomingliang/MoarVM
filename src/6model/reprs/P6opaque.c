@@ -541,8 +541,7 @@ static MVMStorageSpec get_storage_spec(MVMThreadContext *tc, MVMSTable *st) {
 static void compose(MVMThreadContext *tc, MVMSTable *st, MVMObject *info_hash) {
     MVMint64   mro_pos, mro_count, num_parents, total_attrs, num_attrs,
                cur_slot, cur_type, cur_alloc_addr, cur_obj_attr,
-               cur_init_slot, cur_mark_slot, cur_cleanup_slot,
-               unboxed_type, bits, i;
+               cur_init_slot, cur_mark_slot, cur_cleanup_slot;
     MVMObject *info;
 
     /* Allocate the representation data. */
@@ -617,6 +616,7 @@ static void compose(MVMThreadContext *tc, MVMSTable *st, MVMObject *info_hash) {
         MVMObject *class_info = MVM_repr_at_pos_o(tc, info, mro_pos);
         MVMObject *type_obj = MVM_repr_at_pos_o(tc, class_info, 0);
         MVMObject *attr_list = MVM_repr_at_pos_o(tc, class_info, 1);
+        MVMint64 i;
         
         /* Set up name map entry. */
         P6opaqueNameMap *name_map = &repr_data->name_to_index_mapping[cur_type];
@@ -632,7 +632,8 @@ static void compose(MVMThreadContext *tc, MVMSTable *st, MVMObject *info_hash) {
         /* Go over the attributes. */
         for (i = 0; i < num_attrs; i++) {
             MVMObject *attr_info = MVM_repr_at_pos_o(tc, attr_list, i);
-            
+            MVMuint16 bits         = sizeof(MVMObject *) * 8;
+
             /* Extract name, type and if it's a box target. */
             MVMObject *name_obj = REPR(attr_info)->ass_funcs->at_key_boxed(tc,
                 STABLE(attr_info), attr_info, OBJECT_BODY(attr_info), (MVMObject *)str_name);
@@ -654,15 +655,11 @@ static void compose(MVMThreadContext *tc, MVMSTable *st, MVMObject *info_hash) {
                 name_map->names[i] = MVM_repr_get_str(tc, name_obj);
             name_map->slots[i] = cur_slot;
             
-            /* Consider the type. */
-            unboxed_type = MVM_STORAGE_SPEC_BP_NONE;
-            bits         = sizeof(MVMObject *) * 8;
             if (type != NULL) {
                 /* Get the storage spec of the type and see what it wants. */
                 MVMStorageSpec spec = REPR(type)->get_storage_spec(tc, STABLE(type));
                 if (spec.inlineable == MVM_STORAGE_SPEC_INLINED) {
                     /* Yes, it's something we'll flatten. */
-                    unboxed_type = spec.boxed_primitive;
                     bits = spec.bits;
                     repr_data->flattened_stables[i] = STABLE(type);
                     inlined = 1;
@@ -686,7 +683,7 @@ static void compose(MVMThreadContext *tc, MVMSTable *st, MVMObject *info_hash) {
                     /* Is it a target for box/unbox operations? */
                     if (is_box_target) {
                         /* If it boxes a primitive, note that. */
-                        switch (unboxed_type) {
+                        switch (spec.boxed_primitive) {
                             case MVM_STORAGE_SPEC_BP_INT:
                                 if (repr_data->unbox_int_slot >= 0)
                                     MVM_exception_throw_adhoc(tc,

@@ -23,10 +23,10 @@ static MVMCallsite store_arg_callsite;
 
 static void init_code_pair_arg_callsite() {
     /* Set up invocant arg callsite. */
-    MVMCallsiteEntry  fecth_arg_flag[1] = { MVM_CALLSITE_ARG_OBJ };
+    MVMCallsiteEntry fecth_arg_flags[1] = { MVM_CALLSITE_ARG_OBJ };
     MVMCallsiteEntry store_arg_flags[2] = { MVM_CALLSITE_ARG_OBJ, MVM_CALLSITE_ARG_OBJ };
 
-    fetch_arg_callsite.arg_flags  = fecth_arg_flag;
+    fetch_arg_callsite.arg_flags  = fecth_arg_flags;
     fetch_arg_callsite.arg_count  = 1;
     fetch_arg_callsite.num_pos    = 1;
 
@@ -39,7 +39,7 @@ static void init_code_pair_arg_callsite() {
 static MVMObject * code_pair_fetch(MVMThreadContext *tc, MVMObject *cont) {
     MVMRegister return_value;
     CodePairContData      *data   = (CodePairContData *)STABLE(cont)->container_data;
-    MVMObject *            code   = MVM_frame_find_invokee(tc, data->fetch_code);
+    MVMObject             *code   = MVM_frame_find_invokee(tc, data->fetch_code);
 
     tc->cur_frame->return_value   = &return_value;
     tc->cur_frame->return_type    = MVM_RETURN_OBJ;
